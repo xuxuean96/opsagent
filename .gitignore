@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Local configuration and secrets
+.env
+*.env
+config/app.yaml
+config/*.local.yaml
+secrets/
+
+# Runtime data
+data/*.jsonl
+data/*.sqlite3
+data/*.db
+data/uploads/
+data/backups/
+data/restores/
+data/jobs.json
+data/alerts.jsonl
+data/sessions.jsonl
+data/feedback.jsonl
+data/knowledge-drafts.jsonl
+
+# Generated reports and indexes
+data/index.json
+data/governance-report.json
+data/governance-report.md
+data/semantic-cleanup-report.md
+
+# Logs
+logs/
+*.log
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+

@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ops Agent 试用后台</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">Ops</div>
+        <div>
+          <h1>Ops Agent</h1>
+          <p>实施问答、问题复盘、知识沉淀</p>
+        </div>
+      </div>
+
+      <section class="panel auth-panel">
+        <h2>账号登录</h2>
+        <label>用户名<input id="login-username" value="admin" autocomplete="username"></label>
+        <label>密码<input id="login-password" type="password" autocomplete="current-password"></label>
+        <button id="login-btn" type="button">登录</button>
+        <button id="logout-btn" type="button" class="secondary">退出</button>
+        <div id="auth-state" class="hint">未登录</div>
+      </section>
+
+      <nav class="nav">
+        <button class="nav-item active" data-view="chat">实施问答</button>
+        <button class="nav-item" data-view="sessions">会话复盘</button>
+        <button class="nav-item" data-view="admin">管理员介入</button>
+        <button class="nav-item" data-view="knowledge">知识审核</button>
+        <button class="nav-item" data-view="ops">后台告警</button>
+        <button class="nav-item" data-view="config">系统配置</button>
+        <button class="nav-item" data-view="evaluation">效果评测</button>
+        <button class="nav-item" data-view="tasks">问答任务</button>
+      </nav>
+
+      <section class="panel">
+        <h2>运行状态</h2>
+        <dl id="status"><dt>服务</dt><dd>加载中</dd></dl>
+      </section>
+    </aside>
+
+    <main class="main">
+      <section id="view-chat" class="view active">
+        <header class="view-header">
+          <div>
+            <h2>实施问答入口</h2>
+            <p id="trial-guide">登录后先创建会话，再上传日志或截图并提问。</p>
+          </div>
+          <button id="refresh-entry" type="button">刷新入口</button>
+        </header>
+        <div class="session-bar">
+          <label>项目缩写<input id="project-code" placeholder="例如 ZJDL"></label>
+          <label>实施姓名<input id="implementer" placeholder="真实姓名"></label>
+          <label>组件<input id="session-component" placeholder="DDB / KMVue / 加密卡"></label>
+          <button id="start-session" type="button">创建会话</button>
+        </div>
+        <div class="session-tools">
+          <input id="attachment-file" type="file" accept=".txt,.log,.xml,.json,.ini,.conf,image/*">
+          <button id="upload-attachment" type="button">上传日志/图片</button>
+          <button data-feedback="resolved" class="feedback-btn" type="button">已解决</button>
+          <button data-feedback="partial" class="feedback-btn" type="button">部分解决</button>
+          <button data-feedback="unresolved" class="feedback-btn" type="button">未解决</button>
+          <button id="candidate-draft" type="button">生成知识草稿</button>
+          <button id="request-admin" type="button">申请管理员介入</button>
+        </div>
+        <div id="messages" class="messages"></div>
+        <form id="chat-form" class="composer">
+          <textarea id="message" rows="3" placeholder="描述组件、系统环境、报错全文、日志第一条错误和已经做过的检查。"></textarea>
+          <button type="submit">发送</button>
+        </form>
+      </section>
+
+      <section id="view-sessions" class="view">
+        <header class="view-header">
+          <h2>会话复盘</h2>
+          <div class="actions">
+            <button id="refresh-sessions" type="button">全部会话</button>
+            <button id="pending-feedback" type="button">未反馈</button>
+          </div>
+        </header>
+        <div id="feedback-summary" class="metric-grid"></div>
+        <div id="session-list" class="table"></div>
+      </section>
+
+      <section id="view-admin" class="view">
+        <header class="view-header">
+          <h2>管理员介入</h2>
+          <button id="refresh-admin" type="button">刷新介入单</button>
+        </header>
+        <div class="form-grid">
+          <label>介入单 ID<input id="admin-case-id"></label>
+          <label>问题原因<input id="admin-root-cause"></label>
+          <label class="wide">解决方案<textarea id="admin-solution" rows="4"></textarea></label>
+        </div>
+        <button id="resolve-admin" type="button">处理并生成知识草稿</button>
+        <div id="admin-list" class="table"></div>
+      </section>
+
+      <section id="view-knowledge" class="view">
+        <header class="view-header">
+          <h2>知识审核</h2>
+          <div class="actions">
+            <button id="refresh-drafts" type="button">刷新草稿</button>
+            <button id="reindex" type="button">重建索引</button>
+            <button id="run-governance" type="button">治理报告</button>
+          </div>
+        </header>
+        <div class="form-grid">
+          <label>草稿路径<input id="draft-path" placeholder="knowledge-base/13-待审核/xxx.md"></label>
+          <label>发布目录<input id="publish-target" value="knowledge-base/07-故障卡片"></label>
+          <label class="wide">审核备注<textarea id="review-note" rows="3"></textarea></label>
+        </div>
+        <div class="actions padded">
+          <button id="approve-draft" type="button">批准草稿</button>
+          <button id="reject-draft" type="button">驳回草稿</button>
+          <button id="publish-draft" type="button">发布草稿</button>
+        </div>
+        <div id="draft-list" class="table"></div>
+        <pre id="knowledge-output" class="output"></pre>
+      </section>
+
+      <section id="view-ops" class="view">
+        <header class="view-header">
+          <h2>后台告警与维护</h2>
+          <div class="actions">
+            <button id="refresh-alerts" type="button">刷新告警</button>
+            <button id="refresh-audit" type="button">审计日志</button>
+            <button id="storage-check" type="button">存储检查</button>
+            <button id="refresh-jobs" type="button">作业状态</button>
+          </div>
+        </header>
+        <div class="form-grid">
+          <label>备份目录<input id="backup-dir" placeholder="data/backups"></label>
+          <label>备份包路径<input id="restore-archive" placeholder="data/backups/ops-agent-backup-xxxx.zip"></label>
+        </div>
+        <div class="actions padded">
+          <button id="refresh-backups" type="button">刷新备份</button>
+          <button id="create-backup" type="button">创建备份</button>
+          <button id="verify-backup" type="button">校验备份</button>
+          <button id="restore-backup" type="button">执行恢复</button>
+        </div>
+        <div id="alert-list" class="table"></div>
+        <div id="job-list" class="table"></div>
+        <div id="backup-list" class="table"></div>
+        <pre id="ops-output" class="output"></pre>
+      </section>
+
+      <section id="view-config" class="view">
+        <header class="view-header">
+          <h2>系统配置</h2>
+          <button id="test-llm" type="button">测试 LLM</button>
+        </header>
+        <div class="form-grid">
+          <label>LLM Base URL<input id="llm-base-url"></label>
+          <label>LLM API Key<input id="llm-api-key" type="password" placeholder="留空则不修改"></label>
+          <label>LLM 模型<input id="llm-model"></label>
+          <label>Embedding Provider<input id="embedding-provider"></label>
+          <label>Embedding 模型<input id="embedding-model"></label>
+          <label>向量库路径<input id="vector-path"></label>
+          <label>管理员密码<input id="admin-password" type="password" placeholder="如需修改登录密码"></label>
+          <label>会话密钥<input id="secret-key" type="password" placeholder="建议使用随机长字符串"></label>
+        </div>
+        <button id="save-config" type="button">保存配置</button>
+        <header class="view-header"><h2>用户治理</h2><button id="refresh-users" type="button">刷新用户</button></header>
+        <div class="form-grid">
+          <label>用户名<input id="user-username" placeholder="ops01"></label>
+          <label>密码<input id="user-password" type="password" placeholder="初始或重置密码"></label>
+          <label>角色<input id="user-role" placeholder="admin / reviewer / implementer / auditor"></label>
+          <label>启用<input id="user-enabled" type="checkbox" checked></label>
+          <label>项目白名单<input id="user-projects" placeholder="ZJDL, HNXX"></label>
+          <label>组件白名单<input id="user-components" placeholder="DDB, KMVue"></label>
+        </div>
+        <button id="save-user" type="button">保存用户</button>
+        <div id="user-list" class="table"></div>
+        <pre id="config-result" class="output"></pre>
+      </section>
+
+      <section id="view-evaluation" class="view">
+        <header class="view-header">
+          <h2>效果评测</h2>
+          <div class="actions">
+            <button id="run-evaluation" type="button">运行评测</button>
+            <button id="refresh-eval-history" type="button">评测历史</button>
+          </div>
+        </header>
+        <div id="eval-summary" class="metric-grid"></div>
+        <pre id="eval-output" class="output"></pre>
+      </section>
+
+      <section id="view-tasks" class="view">
+        <header class="view-header">
+          <h2>问答任务</h2>
+          <button id="refresh-tasks" type="button">刷新任务</button>
+        </header>
+        <div id="task-list" class="table"></div>
+      </section>
+    </main>
+  </div>
+  <script src="/static/app.js"></script>
+</body>
+</html>

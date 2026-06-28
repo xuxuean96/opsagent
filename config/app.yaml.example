@@ -1,0 +1,110 @@
+knowledge_base_path: knowledge-base
+index_path: data/index.json
+log_path: data/chat_logs.jsonl
+
+llm:
+  provider: openai-compatible
+  base_url: https://api.openai.com/v1
+  api_key: ${OPENAI_API_KEY}
+  model: gpt-4.1-mini
+  temperature: 0.2
+  timeout_seconds: 60
+  retries: 2
+  retry_backoff_seconds: 0.8
+
+embedding:
+  provider: local
+  base_url: https://api.openai.com/v1
+  api_key: ${OPENAI_API_KEY}
+  model: text-embedding-3-small
+
+vector_store:
+  provider: sqlite
+  path: data/vector_store.sqlite3
+  collection: ops_knowledge
+
+retrieval:
+  top_k: 6
+  min_score: 0.05
+  chunk_size: 1200
+  chunk_overlap: 180
+
+evaluation:
+  testset_path: knowledge-base/11-测试集
+  report_json_path: data/eval-report.json
+  report_md_path: data/eval-report.md
+  history_dir: data/evaluations
+  minimum_source_hit_rate: 0.6
+  minimum_keyword_hit_rate: 0.6
+  minimum_publish_score: 80
+
+task:
+  store_path: data/tasks.jsonl
+  job_store_path: data/jobs.jsonl
+
+session:
+  store_path: data/sessions.jsonl
+  upload_dir: data/uploads
+  draft_dir: knowledge-base/13-待审核
+  max_upload_bytes: 5242880
+  allowed_content_types:
+    - text/plain
+    - application/json
+    - application/xml
+    - text/xml
+    - image/png
+    - image/jpeg
+    - image/bmp
+  allowed_extensions:
+    - .txt
+    - .log
+    - .xml
+    - .json
+    - .ini
+    - .conf
+    - .png
+    - .jpg
+    - .jpeg
+    - .bmp
+
+auth:
+  enabled: true
+  username: admin
+  password: ${OPS_AGENT_ADMIN_PASSWORD}
+  secret_key: ${OPS_AGENT_SECRET_KEY}
+  token_ttl_minutes: 720
+  allowed_projects: []
+  allowed_components: []
+  csrf_enabled: true
+  trusted_origins: []
+  users:
+    # 生产建议使用 pbkdf2 哈希密码，不保存明文密码。
+    # - username: implementer01
+    #   password: ${OPS_AGENT_IMPLEMENTER_PASSWORD}
+    #   role: implementer
+    #   enabled: true
+    #   projects: []
+    #   components: []
+    # - username: reviewer01
+    #   password: ${OPS_AGENT_REVIEWER_PASSWORD}
+    #   role: reviewer
+    #   enabled: true
+    # - username: auditor01
+    #   password: ${OPS_AGENT_AUDITOR_PASSWORD}
+    #   role: auditor
+    #   enabled: true
+
+rate_limit:
+  enabled: true
+  requests_per_minute: 120
+  burst: 30
+
+backup:
+  dir: data/backups
+  retention_count: 10
+  warn_if_older_hours: 24
+
+logging:
+  path: data/chat_logs.jsonl
+  max_bytes: 5242880
+  backup_count: 5
