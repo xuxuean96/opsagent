@@ -2,6 +2,14 @@ let sessionId = localStorage.getItem("ops-agent-session") || "";
 let csrfToken = localStorage.getItem("ops-agent-csrf") || "";
 let lastQuestion = "";
 let lastAnswer = "";
+let currentUser = null;
+
+const ROLE_VIEWS = {
+  admin: ["chat", "sessions", "admin", "knowledge", "ops", "accounts", "config", "evaluation", "tasks"],
+  reviewer: ["chat", "sessions", "admin", "knowledge", "ops", "evaluation", "tasks"],
+  implementer: ["chat", "sessions", "tasks"],
+  auditor: ["sessions", "ops", "evaluation", "tasks"],
+};
 
 const $ = (id) => document.getElementById(id);
 
@@ -44,14 +52,19 @@ async function requestJson(url, options = {}) {
 }
 
 function showView(name) {
+  if (!canView(name)) name = defaultView();
   document.querySelectorAll(".view").forEach((view) => view.classList.remove("active"));
   document.querySelectorAll(".nav-item").forEach((item) => item.classList.remove("active"));
-  $(`view-${name}`).classList.add("active");
-  document.querySelector(`[data-view="${name}"]`).classList.add("active");
+  const view = $(`view-${name}`);
+  const nav = document.querySelector(`[data-view="${name}"]`);
+  if (!view || !nav) return;
+  view.classList.add("active");
+  nav.classList.add("active");
   if (name === "chat") loadTrialEntry();
   if (name === "sessions") loadSessions(false);
   if (name === "admin") loadAdminCases();
   if (name === "knowledge") loadDrafts();
+  if (name === "accounts") loadUsers();
   if (name === "ops") {
     loadAlerts();
     loadJobs();
@@ -60,6 +73,34 @@ function showView(name) {
   if (name === "config") loadUsers();
   if (name === "evaluation") loadEvaluationHistory();
   if (name === "tasks") loadTasks();
+}
+
+function visibleViews() {
+  if (!currentUser) return [];
+  return ROLE_VIEWS[currentUser.role] || ROLE_VIEWS.implementer;
+}
+
+function canView(name) {
+  return visibleViews().includes(name);
+}
+
+function defaultView() {
+  return visibleViews()[0] || "chat";
+}
+
+function applyAuthState(user) {
+  currentUser = user;
+  const authenticated = Boolean(user);
+  document.body.classList.toggle("is-authenticated", authenticated);
+  document.body.classList.toggle("is-guest", !authenticated);
+  $("auth-state").textContent = authenticated ? `已登录：${user.username}（${user.role}）` : "未登录";
+  $("current-user").textContent = authenticated ? `${user.username}（${user.role}）` : "未登录";
+  document.querySelectorAll(".nav-item").forEach((item) => {
+    item.hidden = !authenticated || !canView(item.dataset.view);
+  });
+  document.querySelectorAll(".view").forEach((view) => {
+    view.classList.remove("active");
+  });
 }
 
 function addMessage(role, body, sources = []) {
@@ -91,9 +132,9 @@ async function login() {
     username: $("login-username").value.trim(),
     password: $("login-password").value,
   }));
-  $("auth-state").textContent = `已登录：${data.user.username}（${data.user.role}）`;
+  applyAuthState(data.user);
   await loadStatus();
-  await loadTrialEntry();
+  showView(defaultView());
 }
 
 async function logout() {
@@ -102,16 +143,19 @@ async function logout() {
   localStorage.removeItem("ops-agent-csrf");
   sessionId = "";
   csrfToken = "";
-  $("auth-state").textContent = "未登录";
+  currentUser = null;
+  applyAuthState(null);
   $("messages").innerHTML = "";
 }
 
 async function loadAuthState() {
   try {
     const data = await requestJson("/api/auth/me");
-    $("auth-state").textContent = `已登录：${data.user.username}（${data.user.role}）`;
+    applyAuthState(data.user);
+    await loadStatus();
+    showView(defaultView());
   } catch {
-    $("auth-state").textContent = "未登录";
+    applyAuthState(null);
   }
 }
 
@@ -297,11 +341,12 @@ async function loadUsers() {
       row.addEventListener("click", () => {
         const user = data.users.find((item) => item.username === row.dataset.username);
         if (!user) return;
-        $("user-username").value = user.username;
-        $("user-role").value = user.role || "";
-        $("user-enabled").checked = Boolean(user.enabled);
-        $("user-projects").value = (user.projects || []).join(", ");
-        $("user-components").value = (user.components || []).join(", ");
+        $("account-username").value = user.username;
+        $("account-password").value = "";
+        $("account-role").value = user.role || "implementer";
+        $("account-enabled").checked = Boolean(user.enabled);
+        $("account-projects").value = (user.projects || []).join(", ");
+        $("account-components").value = (user.components || []).join(", ");
       });
     });
   } catch (error) {
@@ -311,15 +356,16 @@ async function loadUsers() {
 
 async function saveUser() {
   const payload = {
-    username: $("user-username").value.trim(),
-    role: $("user-role").value.trim() || null,
-    enabled: $("user-enabled").checked,
-    projects: $("user-projects").value.split(",").map((item) => item.trim()).filter(Boolean),
-    components: $("user-components").value.split(",").map((item) => item.trim()).filter(Boolean),
+    username: $("account-username").value.trim(),
+    role: $("account-role").value.trim() || null,
+    enabled: $("account-enabled").checked,
+    projects: $("account-projects").value.split(",").map((item) => item.trim()).filter(Boolean),
+    components: $("account-components").value.split(",").map((item) => item.trim()).filter(Boolean),
   };
-  if ($("user-password").value.trim()) payload.password = $("user-password").value.trim();
+  if ($("account-password").value.trim()) payload.password = $("account-password").value.trim();
   const data = await requestJson("/api/users", jsonBody(payload));
-  $("config-result").textContent = `已保存用户：${data.user.username}`;
+  $("account-result").textContent = `已保存账号：${data.user.username}`;
+  $("account-password").value = "";
   await loadUsers();
 }
 
@@ -360,7 +406,7 @@ $("login-btn").addEventListener("click", async () => {
 });
 
 $("logout-btn").addEventListener("click", async () => {
-  try { await logout(); await loadStatus(); } catch (error) { $("auth-state").textContent = error.message; }
+  try { await logout(); } catch (error) { $("auth-state").textContent = error.message; }
 });
 
 $("refresh-entry").addEventListener("click", loadTrialEntry);
@@ -534,7 +580,7 @@ $("refresh-users").addEventListener("click", loadUsers);
 $("refresh-jobs").addEventListener("click", loadJobs);
 
 $("save-user").addEventListener("click", async () => {
-  try { await saveUser(); } catch (error) { $("config-result").textContent = error.message; }
+  try { await saveUser(); } catch (error) { $("account-result").textContent = error.message; }
 });
 
 $("resolve-admin").addEventListener("click", async () => {
@@ -595,9 +641,5 @@ $("storage-check").addEventListener("click", async () => {
   }
 });
 
+applyAuthState(null);
 loadAuthState();
-loadStatus();
-loadTrialEntry();
-loadTasks();
-loadJobs();
-addMessage("assistant", "请先登录并创建会话。");
