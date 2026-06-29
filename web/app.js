@@ -1,4 +1,4 @@
-let sessionId = localStorage.getItem("ops-agent-session") || "";
+﻿let sessionId = localStorage.getItem("ops-agent-session") || "";
 let csrfToken = localStorage.getItem("ops-agent-csrf") || "";
 let currentProject = localStorage.getItem("ops-agent-current-project") || "";
 let currentImplementer = localStorage.getItem("ops-agent-current-implementer") || "";
@@ -6,6 +6,8 @@ let currentComponent = localStorage.getItem("ops-agent-current-component") || ""
 let lastQuestion = "";
 let lastAnswer = "";
 let currentUser = null;
+let sessionListCache = [];
+let sessionSearchTerm = "";
 
 const ROLE_VIEWS = {
   admin: ["dashboard", "accounts", "sessions", "admin", "knowledge", "ops", "config", "evaluation", "tasks"],
@@ -169,6 +171,27 @@ function loadWorkspaceState() {
   updateWorkspaceControls();
 }
 
+async function loadSessionById(targetSessionId, options = {}) {
+  const data = await requestJson(`/api/sessions/${targetSessionId}`);
+  const session = data.session;
+  sessionId = session.id;
+  currentProject = session.project_code || "";
+  currentImplementer = session.implementer || "";
+  currentComponent = session.component || "";
+  localStorage.setItem("ops-agent-session", sessionId);
+  localStorage.setItem("ops-agent-current-project", currentProject);
+  localStorage.setItem("ops-agent-current-implementer", currentImplementer);
+  localStorage.setItem("ops-agent-current-component", currentComponent);
+  pushRecentProject(currentProject);
+  renderWorkspaceContext();
+  updateWorkspaceControls();
+  await loadStatus();
+  if (!options.silent) {
+    addMessage("assistant", `已切换到会话：${session.project_code} / ${session.implementer}`);
+  }
+  return session;
+}
+
 function switchProject() {
   const select = $("project-code");
   const custom = $("project-custom");
@@ -268,6 +291,14 @@ async function loadAuthState() {
     const data = await requestJson("/api/auth/me");
     applyAuthState(data.user);
     await loadStatus();
+    if (sessionId) {
+      try {
+        await loadSessionById(sessionId, {silent: true});
+      } catch {
+        localStorage.removeItem("ops-agent-session");
+        sessionId = "";
+      }
+    }
     showView(defaultView());
   } catch {
     applyAuthState(null);
@@ -364,23 +395,40 @@ async function loadSessions(pendingOnly) {
   try {
     const summary = await requestJson("/api/sessions/analytics");
     $("feedback-summary").innerHTML = `
-      <div class="metric"><span>待反馈</span><strong>${summary.pending_feedback || 0}</strong></div>
-      <div class="metric"><span>已解决</span><strong>${summary.resolved || 0}</strong></div>
-      <div class="metric"><span>未解决</span><strong>${summary.unresolved || 0}</strong></div>
-      <div class="metric"><span>管理员介入</span><strong>${summary.admin_requested || 0}</strong></div>
+      <div class="metric"><span>寰呭弽棣?/span><strong>${summary.pending_feedback || 0}</strong></div>
+      <div class="metric"><span>宸茶В鍐?/span><strong>${summary.resolved || 0}</strong></div>
+      <div class="metric"><span>鏈В鍐?/span><strong>${summary.unresolved || 0}</strong></div>
+      <div class="metric"><span>绠＄悊鍛樹粙鍏?/span><strong>${summary.admin_requested || 0}</strong></div>
     `;
     const data = await requestJson(`/api/sessions${pendingOnly ? "?pending_feedback=true" : ""}`);
-    $("session-list").innerHTML = data.sessions.map((session) => `
-      <div class="row">
-        <div><strong>${session.project_code} / ${session.implementer}</strong><span>${session.component || "未填组件"} | ${session.feedback_status} | 介入=${session.admin_requested}</span></div>
-        <small>${session.updated_at}</small>
-      </div>
-    `).join("") || "<p>暂无会话。</p>";
+    sessionListCache = data.sessions || [];
+    renderSessionList();
   } catch (error) {
     $("session-list").textContent = error.message;
   }
 }
 
+function renderSessionList() {
+  const sessions = typeof filterSessions === "function"
+    ? filterSessions(sessionListCache, sessionSearchTerm)
+    : sessionListCache.slice();
+  $("session-list").innerHTML = sessions.map((session) => `
+    <div class="row session-row${session.id === sessionId ? " active" : ""}" data-session-id="${session.id}">
+      <div><strong>${session.project_code} / ${session.implementer}</strong><span>${session.component || "鏈～缁勪欢"} | ${session.feedback_status} | 浠嬪叆=${session.admin_requested ? "是" : "否"}</span></div>
+      <small>${session.updated_at}</small>
+    </div>
+  `).join("") || "<p>暂无会话。</p>";
+  document.querySelectorAll("#session-list .session-row").forEach((row) => {
+    row.addEventListener("click", async () => {
+      try {
+        await loadSessionById(row.dataset.sessionId);
+        renderSessionList();
+      } catch (error) {
+        $("session-list").textContent = error.message;
+      }
+    });
+  });
+}
 async function loadAdminCases() {
   try {
     const data = await requestJson("/api/admin/cases");
@@ -786,3 +834,4 @@ $("storage-check").addEventListener("click", async () => {
 
 applyAuthState(null);
 loadAuthState();
+

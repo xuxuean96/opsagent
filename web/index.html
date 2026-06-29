@@ -171,11 +171,13 @@
           <header class="view-header">
             <h2>会话复盘</h2>
             <div class="actions">
+              <input id="session-search" type="search" placeholder="搜索项目、实施人、组件或状态">
               <button id="refresh-sessions" type="button">全部会话</button>
               <button id="pending-feedback" type="button">未反馈</button>
             </div>
           </header>
           <div id="feedback-summary" class="metric-grid"></div>
+          <div class="view-hint">点击任意会话即可切换为当前会话，回到工作台继续问答。</div>
           <div id="session-list" class="table"></div>
         </div>
       </section>
@@ -327,6 +329,7 @@
       </section>
     </main>
   </div>
+  <script src="/static/session-helpers.js"></script>
   <script src="/static/app.js"></script>
 </body>
 </html>
