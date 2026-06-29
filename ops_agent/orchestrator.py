@@ -47,7 +47,9 @@ class ChatOrchestrator:
                     f"检索改写：{rewritten_query}\n\n"
                     f"知识库片段：\n{context}"
                     f"{attachment_block}\n\n"
-                    "请按规范回答，并在末尾列出来源。命令必须使用 Markdown 代码块，高危操作必须明确风险。"
+                    "直接用自然一点的说法回答，先给结论，再给必要步骤。"
+                    "如果有命令，放到代码块里；如果有风险，直接说明。"
+                    "最后只保留一句很短的来源提示，别套固定小标题。"
                 ),
             }
         )
@@ -62,6 +64,7 @@ class ChatOrchestrator:
             )
             for item in results
         ]
+        answer = self._polish_answer(answer)
         answer = append_validation_notes(answer, validate_answer(answer, has_sources=bool(sources)))
         response = ChatResponse(answer=answer, session_id=session_id, sources=sources)
         self.memory.add(session_id, "user", question)
@@ -75,6 +78,28 @@ class ChatOrchestrator:
         for i, item in enumerate(results, start=1):
             lines.append(f"[{i}] {item.chunk.title} ({item.chunk.source_path}, score={item.score:.2f})\n{item.chunk.text}")
         return "\n\n".join(lines)
+
+    @staticmethod
+    def _polish_answer(answer: str) -> str:
+        lines = []
+        for line in answer.splitlines():
+            stripped = line.strip()
+            if not stripped:
+                lines.append("")
+                continue
+            if stripped.startswith(("一、", "二、", "三、", "四、", "五、", "六、", "七、", "八、", "九、")):
+                lines.append(stripped.split("、", 1)[1].strip())
+                continue
+            if stripped.startswith(("1.", "2.", "3.", "4.", "5.", "6.", "7.", "8.", "9.")):
+                lines.append(stripped[2:].strip())
+                continue
+            if stripped in {"结论：", "步骤：", "来源：", "参考："}:
+                continue
+            lines.append(line)
+        cleaned = "\n".join(lines).strip()
+        cleaned = cleaned.replace("【来源】", "来源：")
+        cleaned = cleaned.replace("来源:\n", "来源：")
+        return cleaned
 
     def _log(self, session_id: str, question: str, rewritten_query: str, response: ChatResponse) -> None:
         if not self.logger:

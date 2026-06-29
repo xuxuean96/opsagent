@@ -13,7 +13,7 @@
         <div class="brand-mark">Ops</div>
         <div>
           <h1>Ops Agent</h1>
-          <p>请先登录，系统会根据账号角色进入对应工作台。</p>
+          <p>先登录，再按角色进入对应工作台。</p>
         </div>
       </div>
       <label>用户名<input id="login-username" value="admin" autocomplete="username"></label>
@@ -29,7 +29,7 @@
         <div class="brand-mark">Ops</div>
         <div>
           <h1>Ops Agent</h1>
-          <p>实施问答、问题复盘、知识沉淀</p>
+          <p>实施问答、问题复盘、知识沉淀。</p>
         </div>
       </div>
 
@@ -40,16 +40,22 @@
       </section>
 
       <nav class="nav">
-        <button class="nav-item active" data-view="workspace">工作台</button>
-        <button class="nav-item" data-view="dashboard">管理首页</button>
-        <button class="nav-item" data-view="sessions">会话复盘</button>
-        <button class="nav-item" data-view="admin">管理员介入</button>
-        <button class="nav-item" data-view="knowledge">知识审核</button>
-        <button class="nav-item" data-view="ops">后台告警</button>
-        <button class="nav-item" data-view="accounts">账号管理</button>
-        <button class="nav-item" data-view="config">系统配置</button>
-        <button class="nav-item" data-view="evaluation">效果评测</button>
-        <button class="nav-item" data-view="tasks">问答任务</button>
+        <div class="nav-group">
+          <span>工作台</span>
+          <button class="nav-item active" data-view="workspace">实施工作台</button>
+          <button class="nav-item" data-view="sessions">会话复盘</button>
+          <button class="nav-item" data-view="tasks">问答任务</button>
+        </div>
+        <div class="nav-group">
+          <span>管理</span>
+          <button class="nav-item" data-view="dashboard">管理首页</button>
+          <button class="nav-item" data-view="admin">管理员介入</button>
+          <button class="nav-item" data-view="knowledge">知识审核</button>
+          <button class="nav-item" data-view="ops">告警与维护</button>
+          <button class="nav-item" data-view="accounts">账号管理</button>
+          <button class="nav-item" data-view="config">系统配置</button>
+          <button class="nav-item" data-view="evaluation">效果评测</button>
+        </div>
       </nav>
 
       <section class="panel">
@@ -60,234 +66,264 @@
 
     <main class="main">
       <div id="implementer-shell" class="role-shell">
-        <div class="workspace-topbar">
-          <div>
-            <span class="eyebrow">当前项目</span>
-            <strong id="current-project-code">未选择</strong>
+        <header class="shell-topbar">
+          <div class="shell-context">
+            <span class="eyebrow">当前会话上下文</span>
+            <strong id="current-project-code">未选择项目</strong>
+            <div class="context-line">
+              <span>实施人：</span><strong id="current-implementer-display">未设置</strong>
+              <span>组件：</span><strong id="current-component-display">未设置</strong>
+            </div>
+            <small id="workspace-status" class="workspace-status">请选择项目后新建会话</small>
           </div>
-          <div id="project-switcher" class="project-switcher">
-            <input id="project-code" placeholder="项目缩写，如 ZJDL">
-            <input id="implementer" placeholder="实施姓名">
-            <input id="session-component" placeholder="组件，如 DDB / KMVue">
-            <button id="switch-project" type="button">切换项目</button>
+          <div class="shell-actions">
+            <div id="project-switcher" class="project-switcher">
+              <select id="project-code"></select>
+              <input id="project-custom" placeholder="自定义项目缩写" hidden>
+              <input id="project-implementer" placeholder="实施人" readonly>
+              <input id="project-component" placeholder="组件名称" readonly>
+              <button id="switch-project" type="button">切换项目</button>
+              <button id="refresh-entry" type="button" class="secondary">刷新入口</button>
+            </div>
           </div>
-        </div>
+        </header>
       </div>
 
       <div id="management-shell" class="role-shell">
-        <div class="workspace-topbar">
-          <div>
+        <header class="shell-topbar">
+          <div class="shell-context">
             <span class="eyebrow">管理控制台</span>
-            <strong>待处理事项、账号、知识和运行状态</strong>
+            <strong>问题复盘、账号、知识与运行状态</strong>
           </div>
-        </div>
+        </header>
       </div>
 
-      <section id="view-workspace" class="view active">
-        <header class="view-header">
-          <div>
-            <h2>实施工作台</h2>
-            <p id="trial-guide">先选择项目，再围绕当前项目创建问题会话、上传日志或截图并提问。</p>
-          </div>
-          <button id="refresh-entry" type="button">刷新入口</button>
-        </header>
-        <div class="workspace-layout">
-          <aside class="workspace-side">
-            <button id="start-session" type="button">新建问题会话</button>
-            <input id="attachment-file" type="file" accept=".txt,.log,.xml,.json,.ini,.conf,image/*">
-            <button id="upload-attachment" type="button">上传日志/图片</button>
-            <button id="request-admin" type="button">申请管理员介入</button>
-            <button id="candidate-draft" type="button">生成知识草稿</button>
-            <div class="feedback-stack">
-              <span>本次会话反馈</span>
-              <button data-feedback="resolved" class="feedback-btn secondary" type="button">已解决</button>
-              <button data-feedback="partial" class="feedback-btn secondary" type="button">部分解决</button>
-              <button data-feedback="unresolved" class="feedback-btn secondary" type="button">未解决</button>
+      <section id="view-workspace" class="view">
+        <div class="view-scroll">
+          <header class="view-header">
+            <div>
+              <h2>实施工作台</h2>
+              <p id="trial-guide">请选择项目并创建会话，再进行提问、上传和生成草稿。</p>
             </div>
-          </aside>
-          <section class="chat-panel">
-            <div id="messages" class="messages"></div>
-            <form id="chat-form" class="composer">
-              <textarea id="message" rows="3" placeholder="描述组件、系统环境、报错全文、日志第一条错误和已经做过的检查。"></textarea>
-              <button type="submit">发送</button>
-            </form>
-          </section>
+            <button id="start-session" type="button">新建会话</button>
+          </header>
+          <div class="workspace-layout">
+            <aside class="workspace-side">
+              <button id="upload-attachment" type="button" disabled>上传日志/图片</button>
+              <input id="attachment-file" type="file" accept=".txt,.log,.xml,.json,.ini,.conf,image/*" disabled>
+              <button id="candidate-draft" type="button" disabled>生成知识草稿</button>
+              <button id="request-admin" type="button" disabled>申请管理员介入</button>
+              <div class="feedback-stack">
+                <span>会话反馈</span>
+                <div class="feedback-row">
+                  <button data-feedback="resolved" class="feedback-btn secondary" type="button" disabled>已解决</button>
+                  <button data-feedback="partial" class="feedback-btn secondary" type="button" disabled>部分解决</button>
+                  <button data-feedback="unresolved" class="feedback-btn secondary" type="button" disabled>未解决</button>
+                </div>
+              </div>
+            </aside>
+            <section class="chat-panel">
+              <div id="messages" class="messages"></div>
+              <form id="chat-form" class="composer">
+                <textarea id="message" rows="3" placeholder="请输入问题、环境、报错全文和已尝试的排查步骤。" disabled></textarea>
+                <button id="chat-send" type="submit" disabled>发送</button>
+              </form>
+            </section>
+          </div>
         </div>
       </section>
 
       <section id="view-dashboard" class="view">
-        <header class="view-header">
-          <div>
-            <h2>管理首页</h2>
-            <p>集中查看待反馈会话、管理员介入、后台告警和运行作业。</p>
+        <div class="view-scroll">
+          <header class="view-header">
+            <div>
+              <h2>管理首页</h2>
+              <p>查看待反馈会话、管理员介入、告警和后台作业。</p>
+            </div>
+            <div class="actions">
+              <button id="refresh-sessions-dashboard" type="button">刷新复盘</button>
+              <button id="refresh-alerts-dashboard" type="button">刷新告警</button>
+            </div>
+          </header>
+          <div id="admin-dashboard" class="dashboard-grid">
+            <section>
+              <h2>会话反馈</h2>
+              <div id="feedback-summary-dashboard" class="metric-grid"></div>
+            </section>
+            <section>
+              <h2>管理员介入</h2>
+              <div id="admin-list-dashboard" class="table"></div>
+            </section>
+            <section>
+              <h2>后台告警</h2>
+              <div id="alert-list-dashboard" class="table"></div>
+            </section>
+            <section>
+              <h2>后台作业</h2>
+              <div id="job-list-dashboard" class="table"></div>
+            </section>
           </div>
-          <div class="actions">
-            <button id="refresh-sessions-dashboard" type="button">刷新复盘</button>
-            <button id="refresh-alerts-dashboard" type="button">刷新告警</button>
-          </div>
-        </header>
-        <div id="admin-dashboard" class="dashboard-grid">
-          <section>
-            <h2>会话反馈</h2>
-            <div id="feedback-summary-dashboard" class="metric-grid"></div>
-          </section>
-          <section>
-            <h2>管理员介入</h2>
-            <div id="admin-list-dashboard" class="table"></div>
-          </section>
-          <section>
-            <h2>后台告警</h2>
-            <div id="alert-list-dashboard" class="table"></div>
-          </section>
-          <section>
-            <h2>后台作业</h2>
-            <div id="job-list-dashboard" class="table"></div>
-          </section>
         </div>
       </section>
 
       <section id="view-sessions" class="view">
-        <header class="view-header">
-          <h2>会话复盘</h2>
-          <div class="actions">
-            <button id="refresh-sessions" type="button">全部会话</button>
-            <button id="pending-feedback" type="button">未反馈</button>
-          </div>
-        </header>
-        <div id="feedback-summary" class="metric-grid"></div>
-        <div id="session-list" class="table"></div>
+        <div class="view-scroll">
+          <header class="view-header">
+            <h2>会话复盘</h2>
+            <div class="actions">
+              <button id="refresh-sessions" type="button">全部会话</button>
+              <button id="pending-feedback" type="button">未反馈</button>
+            </div>
+          </header>
+          <div id="feedback-summary" class="metric-grid"></div>
+          <div id="session-list" class="table"></div>
+        </div>
       </section>
 
       <section id="view-admin" class="view">
-        <header class="view-header">
-          <h2>管理员介入</h2>
-          <button id="refresh-admin" type="button">刷新介入单</button>
-        </header>
-        <div class="form-grid">
-          <label>介入单 ID<input id="admin-case-id"></label>
-          <label>问题原因<input id="admin-root-cause"></label>
-          <label class="wide">解决方案<textarea id="admin-solution" rows="4"></textarea></label>
+        <div class="view-scroll">
+          <header class="view-header">
+            <h2>管理员介入</h2>
+            <button id="refresh-admin" type="button">刷新介入单</button>
+          </header>
+          <div class="form-grid">
+            <label>介入单 ID<input id="admin-case-id"></label>
+            <label>问题根因<input id="admin-root-cause"></label>
+            <label class="wide">解决方案<textarea id="admin-solution" rows="4"></textarea></label>
+          </div>
+          <button id="resolve-admin" type="button">处理并生成知识草稿</button>
+          <div id="admin-list" class="table"></div>
         </div>
-        <button id="resolve-admin" type="button">处理并生成知识草稿</button>
-        <div id="admin-list" class="table"></div>
       </section>
 
       <section id="view-knowledge" class="view">
-        <header class="view-header">
-          <h2>知识审核</h2>
-          <div class="actions">
-            <button id="refresh-drafts" type="button">刷新草稿</button>
-            <button id="reindex" type="button">重建索引</button>
-            <button id="run-governance" type="button">治理报告</button>
+        <div class="view-scroll">
+          <header class="view-header">
+            <h2>知识审核</h2>
+            <div class="actions">
+              <button id="refresh-drafts" type="button">刷新草稿</button>
+              <button id="reindex" type="button">重建索引</button>
+              <button id="run-governance" type="button">治理报告</button>
+            </div>
+          </header>
+          <div class="form-grid">
+            <label>草稿路径<input id="draft-path" placeholder="knowledge-base/13-待审核/xxx.md"></label>
+            <label>发布目录<input id="publish-target" value="knowledge-base/07-故障卡片"></label>
+            <label class="wide">审核备注<textarea id="review-note" rows="3"></textarea></label>
           </div>
-        </header>
-        <div class="form-grid">
-          <label>草稿路径<input id="draft-path" placeholder="knowledge-base/13-待审核/xxx.md"></label>
-          <label>发布目录<input id="publish-target" value="knowledge-base/07-故障卡片"></label>
-          <label class="wide">审核备注<textarea id="review-note" rows="3"></textarea></label>
+          <div class="actions padded">
+            <button id="approve-draft" type="button">批准草稿</button>
+            <button id="reject-draft" type="button">驳回草稿</button>
+            <button id="publish-draft" type="button">发布草稿</button>
+          </div>
+          <div id="draft-list" class="table"></div>
+          <pre id="knowledge-output" class="output"></pre>
         </div>
-        <div class="actions padded">
-          <button id="approve-draft" type="button">批准草稿</button>
-          <button id="reject-draft" type="button">驳回草稿</button>
-          <button id="publish-draft" type="button">发布草稿</button>
-        </div>
-        <div id="draft-list" class="table"></div>
-        <pre id="knowledge-output" class="output"></pre>
       </section>
 
       <section id="view-ops" class="view">
-        <header class="view-header">
-          <h2>后台告警与维护</h2>
-          <div class="actions">
-            <button id="refresh-alerts" type="button">刷新告警</button>
-            <button id="refresh-audit" type="button">审计日志</button>
-            <button id="storage-check" type="button">存储检查</button>
-            <button id="refresh-jobs" type="button">作业状态</button>
+        <div class="view-scroll">
+          <header class="view-header">
+            <h2>告警与维护</h2>
+            <div class="actions">
+              <button id="refresh-alerts" type="button">刷新告警</button>
+              <button id="refresh-audit" type="button">审计日志</button>
+              <button id="storage-check" type="button">存储检查</button>
+              <button id="refresh-jobs" type="button">作业状态</button>
+            </div>
+          </header>
+          <div class="form-grid">
+            <label>备份目录<input id="backup-dir" placeholder="data/backups"></label>
+            <label>备份包路径<input id="restore-archive" placeholder="data/backups/ops-agent-backup-xxxx.zip"></label>
           </div>
-        </header>
-        <div class="form-grid">
-          <label>备份目录<input id="backup-dir" placeholder="data/backups"></label>
-          <label>备份包路径<input id="restore-archive" placeholder="data/backups/ops-agent-backup-xxxx.zip"></label>
+          <div class="actions padded">
+            <button id="refresh-backups" type="button">刷新备份</button>
+            <button id="create-backup" type="button">创建备份</button>
+            <button id="verify-backup" type="button">校验备份</button>
+            <button id="restore-backup" type="button">执行恢复</button>
+          </div>
+          <div id="alert-list" class="table"></div>
+          <div id="job-list" class="table"></div>
+          <div id="backup-list" class="table"></div>
+          <pre id="ops-output" class="output"></pre>
         </div>
-        <div class="actions padded">
-          <button id="refresh-backups" type="button">刷新备份</button>
-          <button id="create-backup" type="button">创建备份</button>
-          <button id="verify-backup" type="button">校验备份</button>
-          <button id="restore-backup" type="button">执行恢复</button>
-        </div>
-        <div id="alert-list" class="table"></div>
-        <div id="job-list" class="table"></div>
-        <div id="backup-list" class="table"></div>
-        <pre id="ops-output" class="output"></pre>
       </section>
 
       <section id="view-accounts" class="view">
-        <header class="view-header">
-          <div>
-            <h2>账号管理</h2>
-            <p>创建实施、审核和审计账号，分配角色、初始密码、项目范围和组件范围。</p>
+        <div class="view-scroll">
+          <header class="view-header">
+            <div>
+              <h2>账号管理</h2>
+              <p>创建实施、审核和审计账号，分配角色、初始密码、项目范围和组件范围。</p>
+            </div>
+            <button id="refresh-users" type="button">刷新账号</button>
+          </header>
+          <div class="form-grid">
+            <label>用户名<input id="account-username" placeholder="ops01"></label>
+            <label>初始密码<input id="account-password" type="password" placeholder="新增账号必填，编辑时可留空"></label>
+            <label>角色
+              <select id="account-role">
+                <option value="implementer">实施</option>
+                <option value="reviewer">审核员</option>
+                <option value="auditor">审计员</option>
+                <option value="admin">管理员</option>
+              </select>
+            </label>
+            <label>启用<input id="account-enabled" type="checkbox" checked></label>
+            <label>项目白名单<input id="account-projects" placeholder="ZJDL, HNXX"></label>
+            <label>组件白名单<input id="account-components" placeholder="DDB, KMVue"></label>
           </div>
-          <button id="refresh-users" type="button">刷新账号</button>
-        </header>
-        <div class="form-grid">
-          <label>用户名<input id="account-username" placeholder="ops01"></label>
-          <label>初始密码<input id="account-password" type="password" placeholder="新增账号必填，编辑时留空不修改"></label>
-          <label>角色
-            <select id="account-role">
-              <option value="implementer">实施</option>
-              <option value="reviewer">审核员</option>
-              <option value="auditor">审计员</option>
-              <option value="admin">管理员</option>
-            </select>
-          </label>
-          <label>启用<input id="account-enabled" type="checkbox" checked></label>
-          <label>项目白名单<input id="account-projects" placeholder="ZJDL, HNXX"></label>
-          <label>组件白名单<input id="account-components" placeholder="DDB, KMVue"></label>
+          <div class="actions padded">
+            <button id="save-user" type="button">保存账号</button>
+          </div>
+          <div id="user-list" class="table"></div>
+          <pre id="account-result" class="output"></pre>
         </div>
-        <div class="actions padded">
-          <button id="save-user" type="button">保存账号</button>
-        </div>
-        <div id="user-list" class="table"></div>
-        <pre id="account-result" class="output"></pre>
       </section>
 
       <section id="view-config" class="view">
-        <header class="view-header">
-          <h2>系统配置</h2>
-          <button id="test-llm" type="button">测试 LLM</button>
-        </header>
-        <div class="form-grid">
-          <label>LLM Base URL<input id="llm-base-url"></label>
-          <label>LLM API Key<input id="llm-api-key" type="password" placeholder="留空则不修改"></label>
-          <label>LLM 模型<input id="llm-model"></label>
-          <label>Embedding Provider<input id="embedding-provider"></label>
-          <label>Embedding 模型<input id="embedding-model"></label>
-          <label>向量库路径<input id="vector-path"></label>
-          <label>管理员密码<input id="admin-password" type="password" placeholder="如需修改登录密码"></label>
-          <label>会话密钥<input id="secret-key" type="password" placeholder="建议使用随机长字符串"></label>
+        <div class="view-scroll">
+          <header class="view-header">
+            <h2>系统配置</h2>
+            <button id="test-llm" type="button">测试 LLM</button>
+          </header>
+          <div class="form-grid">
+            <label>LLM Base URL<input id="llm-base-url"></label>
+            <label>LLM API Key<input id="llm-api-key" type="password" placeholder="留空则不修改"></label>
+            <label>LLM 模型<input id="llm-model"></label>
+            <label>Embedding Provider<input id="embedding-provider"></label>
+            <label>Embedding 模型<input id="embedding-model"></label>
+            <label>向量库路径<input id="vector-path"></label>
+            <label>管理员密码<input id="admin-password" type="password" placeholder="如需修改登录密码"></label>
+            <label>会话密钥<input id="secret-key" type="password" placeholder="建议使用随机长字符串"></label>
+          </div>
+          <button id="save-config" type="button">保存配置</button>
+          <pre id="config-result" class="output"></pre>
         </div>
-        <button id="save-config" type="button">保存配置</button>
-        <pre id="config-result" class="output"></pre>
       </section>
 
       <section id="view-evaluation" class="view">
-        <header class="view-header">
-          <h2>效果评测</h2>
-          <div class="actions">
-            <button id="run-evaluation" type="button">运行评测</button>
-            <button id="refresh-eval-history" type="button">评测历史</button>
-          </div>
-        </header>
-        <div id="eval-summary" class="metric-grid"></div>
-        <pre id="eval-output" class="output"></pre>
+        <div class="view-scroll">
+          <header class="view-header">
+            <h2>效果评测</h2>
+            <div class="actions">
+              <button id="run-evaluation" type="button">运行评测</button>
+              <button id="refresh-eval-history" type="button">评测历史</button>
+            </div>
+          </header>
+          <div id="eval-summary" class="metric-grid"></div>
+          <pre id="eval-output" class="output"></pre>
+        </div>
       </section>
 
       <section id="view-tasks" class="view">
-        <header class="view-header">
-          <h2>问答任务</h2>
-          <button id="refresh-tasks" type="button">刷新任务</button>
-        </header>
-        <div id="task-list" class="table"></div>
+        <div class="view-scroll">
+          <header class="view-header">
+            <h2>问答任务</h2>
+            <button id="refresh-tasks" type="button">刷新任务</button>
+          </header>
+          <div id="task-list" class="table"></div>
+        </div>
       </section>
     </main>
   </div>

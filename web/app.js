@@ -15,6 +15,7 @@ const ROLE_VIEWS = {
 };
 
 const $ = (id) => document.getElementById(id);
+const RECENT_PROJECTS_KEY = "ops-agent-recent-projects";
 
 function jsonBody(payload) {
   return {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(payload)};
@@ -54,6 +55,140 @@ async function requestJson(url, options = {}) {
   return data;
 }
 
+function visibleViews() {
+  if (!currentUser) return [];
+  return ROLE_VIEWS[currentUser.role] || ROLE_VIEWS.implementer;
+}
+
+function canView(name) {
+  return visibleViews().includes(name);
+}
+
+function defaultView() {
+  return visibleViews()[0] || "workspace";
+}
+
+function addMessage(role, body, sources = []) {
+  const item = document.createElement("div");
+  item.className = `message ${role}`;
+  item.textContent = body;
+  if (sources.length) {
+    const sourceBox = document.createElement("div");
+    sourceBox.className = "sources";
+    sources.forEach((source, index) => {
+      const sourceItem = document.createElement("div");
+      sourceItem.className = "source";
+      sourceItem.textContent = `[${index + 1}] ${source.title} | ${source.path} | score=${source.score}`;
+      sourceBox.appendChild(sourceItem);
+    });
+    item.appendChild(sourceBox);
+  }
+  $("messages").appendChild(item);
+  $("messages").scrollTop = $("messages").scrollHeight;
+  return item;
+}
+
+function readRecentProjects() {
+  try {
+    return JSON.parse(localStorage.getItem(RECENT_PROJECTS_KEY) || "[]").filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+function writeRecentProjects(projects) {
+  localStorage.setItem(RECENT_PROJECTS_KEY, JSON.stringify(projects.slice(0, 8)));
+}
+
+function pushRecentProject(project) {
+  if (!project) return;
+  const projects = [project, ...readRecentProjects().filter((item) => item !== project)];
+  writeRecentProjects(projects);
+}
+
+function populateProjectSelect() {
+  const select = $("project-code");
+  if (!select) return;
+  const projects = [...new Set([
+    ...(currentUser?.projects || []),
+    ...readRecentProjects(),
+    currentProject,
+  ].filter(Boolean))];
+  select.innerHTML = [
+    '<option value="">请选择项目</option>',
+    ...projects.map((project) => `<option value="${project}">${project}</option>`),
+    '<option value="__custom__">自定义项目...</option>',
+  ].join("");
+  if (currentProject && projects.includes(currentProject)) {
+    select.value = currentProject;
+  } else if (currentProject) {
+    select.value = "__custom__";
+    $("project-custom").value = currentProject;
+  }
+  toggleCustomProjectInput();
+}
+
+function toggleCustomProjectInput() {
+  const select = $("project-code");
+  const custom = $("project-custom");
+  if (!select || !custom) return;
+  const showCustom = select.value === "__custom__";
+  custom.hidden = !showCustom;
+  custom.required = showCustom;
+}
+
+function renderWorkspaceContext() {
+  $("current-project-code").textContent = currentProject || "未选择项目";
+  $("current-implementer-display").textContent = currentImplementer || "未设置";
+  $("current-component-display").textContent = currentComponent || "未设置";
+  $("project-implementer").value = currentImplementer || "";
+  $("project-component").value = currentComponent || "";
+  $("workspace-status").textContent = sessionId
+    ? `当前会话已创建，绑定项目 ${currentProject || "未选择"}`
+    : currentProject
+      ? `已选择项目 ${currentProject}，点击新建会话生效`
+      : "请选择项目后新建会话";
+  populateProjectSelect();
+}
+
+function updateWorkspaceControls() {
+  const hasSession = Boolean(sessionId);
+  $("message").disabled = !hasSession;
+  $("chat-send").disabled = !hasSession;
+  $("upload-attachment").disabled = !hasSession;
+  $("attachment-file").disabled = !hasSession;
+  $("candidate-draft").disabled = !hasSession;
+  $("request-admin").disabled = !hasSession;
+  document.querySelectorAll(".feedback-btn").forEach((btn) => {
+    btn.disabled = !hasSession;
+  });
+}
+
+function loadWorkspaceState() {
+  renderWorkspaceContext();
+  updateWorkspaceControls();
+}
+
+function switchProject() {
+  const select = $("project-code");
+  const custom = $("project-custom");
+  const selected = select?.value || "";
+  const project = selected === "__custom__" ? custom?.value.trim().toUpperCase() : selected.trim().toUpperCase();
+  if (!/^[A-Z0-9]{2,16}$/.test(project)) {
+    throw new Error("项目必须使用拼音首字母缩写，如 ZJDL");
+  }
+  currentProject = project;
+  currentImplementer = currentUser?.username || currentImplementer || "";
+  currentComponent = currentComponent || "";
+  localStorage.setItem("ops-agent-current-project", currentProject);
+  localStorage.setItem("ops-agent-current-implementer", currentImplementer);
+  localStorage.setItem("ops-agent-current-component", currentComponent);
+  pushRecentProject(currentProject);
+  renderWorkspaceContext();
+  updateWorkspaceControls();
+  addMessage("assistant", `已选择项目 ${currentProject}，请新建会话后开始提问。`);
+}
+
 function showView(name) {
   if (!canView(name)) name = defaultView();
   document.querySelectorAll(".view").forEach((view) => view.classList.remove("active"));
@@ -79,53 +214,13 @@ function showView(name) {
   if (name === "tasks") loadTasks();
 }
 
-function visibleViews() {
-  if (!currentUser) return [];
-  return ROLE_VIEWS[currentUser.role] || ROLE_VIEWS.implementer;
-}
-
-function canView(name) {
-  return visibleViews().includes(name);
-}
-
-function defaultView() {
-  return visibleViews()[0] || "workspace";
-}
-
-function renderProjectContext() {
-  $("current-project-code").textContent = currentProject || "未选择";
-  $("project-code").value = currentProject;
-  $("implementer").value = currentImplementer;
-  $("session-component").value = currentComponent;
-}
-
-function switchProject() {
-  const project = $("project-code").value.trim().toUpperCase();
-  const implementer = $("implementer").value.trim();
-  const component = $("session-component").value.trim();
-  if (!/^[A-Z0-9]{2,16}$/.test(project)) {
-    throw new Error("项目名称必须填写拼音首字母缩写，例如 ZJDL。");
-  }
-  if (!implementer) {
-    throw new Error("请填写实施姓名，便于后续复盘和沉淀知识。");
-  }
-  currentProject = project;
-  currentImplementer = implementer;
-  currentComponent = component;
-  localStorage.setItem("ops-agent-current-project", currentProject);
-  localStorage.setItem("ops-agent-current-implementer", currentImplementer);
-  localStorage.setItem("ops-agent-current-component", currentComponent);
-  renderProjectContext();
-  addMessage("assistant", `已切换到项目：${currentProject} / ${currentImplementer}${currentComponent ? " / " + currentComponent : ""}`);
-}
-
 function renderRoleShell() {
   const implementerShell = $("implementer-shell");
   const managementShell = $("management-shell");
   const isImplementer = currentUser && currentUser.role === "implementer";
   implementerShell.hidden = !isImplementer;
   managementShell.hidden = !currentUser || isImplementer;
-  renderProjectContext();
+  loadWorkspaceState();
 }
 
 function applyAuthState(user) {
@@ -138,34 +233,13 @@ function applyAuthState(user) {
   document.querySelectorAll(".nav-item").forEach((item) => {
     item.hidden = !authenticated || !canView(item.dataset.view);
   });
-  document.querySelectorAll(".view").forEach((view) => {
-    view.classList.remove("active");
-  });
+  document.querySelectorAll(".view").forEach((view) => view.classList.remove("active"));
   renderRoleShell();
-}
-
-function addMessage(role, body, sources = []) {
-  const item = document.createElement("div");
-  item.className = `message ${role}`;
-  item.textContent = body;
-  if (sources.length) {
-    const sourceBox = document.createElement("div");
-    sourceBox.className = "sources";
-    sources.forEach((source, index) => {
-      const sourceItem = document.createElement("div");
-      sourceItem.className = "source";
-      sourceItem.textContent = `[${index + 1}] ${source.title} | ${source.path} | score=${source.score}`;
-      sourceBox.appendChild(sourceItem);
-    });
-    item.appendChild(sourceBox);
-  }
-  $("messages").appendChild(item);
-  $("messages").scrollTop = $("messages").scrollHeight;
-  return item;
+  updateWorkspaceControls();
 }
 
 function requireSession() {
-  if (!sessionId) throw new Error("请先创建会话。");
+  if (!sessionId) throw new Error("请先创建会话");
 }
 
 async function login() {
@@ -203,7 +277,7 @@ async function loadAuthState() {
 async function loadTrialEntry() {
   try {
     const data = await requestJson("/api/trial/entry");
-    $("trial-guide").textContent = `${data.entry.chat_placeholder} 项目名称必须填写为${data.entry.requires_project_code_format}。`;
+    $("trial-guide").textContent = data.entry.chat_placeholder;
   } catch (error) {
     $("trial-guide").textContent = error.message;
   }
@@ -390,7 +464,7 @@ async function loadUsers() {
       <div class="row" data-username="${user.username}">
         <div><strong>${user.username}</strong><span>${user.role} | ${user.enabled ? "启用" : "禁用"} | ${(user.projects || []).join(", ") || "全部项目"} | ${(user.components || []).join(", ") || "全部组件"}</span></div>
       </div>
-    `).join("") || "<p>暂无用户。</p>";
+    `).join("") || "<p>暂无账号。</p>";
     document.querySelectorAll("#user-list .row").forEach((row) => {
       row.addEventListener("click", () => {
         const user = data.users.find((item) => item.username === row.dataset.username);
@@ -465,6 +539,8 @@ $("logout-btn").addEventListener("click", async () => {
 
 $("refresh-entry").addEventListener("click", loadTrialEntry);
 
+$("project-code").addEventListener("change", toggleCustomProjectInput);
+
 $("switch-project").addEventListener("click", () => {
   try {
     switchProject();
@@ -475,15 +551,17 @@ $("switch-project").addEventListener("click", () => {
 
 $("start-session").addEventListener("click", async () => {
   try {
-    if (!currentProject || !currentImplementer) switchProject();
+    if (!currentProject) switchProject();
     const data = await requestJson("/api/sessions", jsonBody({
       project_code: currentProject,
-      implementer: currentImplementer,
+      implementer: currentImplementer || currentUser?.username || "",
       component: currentComponent || null,
     }));
     sessionId = data.session.id;
     localStorage.setItem("ops-agent-session", sessionId);
     addMessage("assistant", `会话已创建：${data.session.project_code} / ${data.session.implementer}`);
+    renderWorkspaceContext();
+    updateWorkspaceControls();
     await loadStatus();
   } catch (error) {
     addMessage("assistant error", error.message);
@@ -503,7 +581,7 @@ $("chat-form").addEventListener("submit", async (event) => {
   $("message").value = "";
   lastQuestion = message;
   addMessage("user", message);
-  const pending = addMessage("assistant", "正在检索知识库并调用 LLM 生成回答...");
+  const pending = addMessage("assistant", "正在检索知识并调用 LLM 生成回答...");
   try {
     const data = await requestJson("/api/chat", jsonBody({message, session_id: sessionId}));
     pending.remove();
@@ -520,14 +598,14 @@ $("upload-attachment").addEventListener("click", async () => {
   try {
     requireSession();
     const file = $("attachment-file").files[0];
-    if (!file) throw new Error("请选择要上传的日志、文本或图片。");
+    if (!file) throw new Error("请选择要上传的日志或图片");
     const content = await fileToBase64(file);
     const data = await requestJson(`/api/sessions/${sessionId}/attachments`, jsonBody({
       filename: file.name,
       content_type: file.type || "application/octet-stream",
       content_base64: content,
     }));
-    addMessage("assistant", `附件已上传，提取内容摘要：\n${data.attachment.extracted_text.slice(0, 1200)}`);
+    addMessage("assistant", `附件已上传，摘要：\n${data.attachment.extracted_text.slice(0, 1200)}`);
   } catch (error) {
     addMessage("assistant error", error.message);
   }
@@ -548,7 +626,7 @@ document.querySelectorAll(".feedback-btn").forEach((btn) => {
 $("candidate-draft").addEventListener("click", async () => {
   try {
     requireSession();
-    if (!lastQuestion || !lastAnswer) throw new Error("当前会话还没有可沉淀的问答。");
+    if (!lastQuestion || !lastAnswer) throw new Error("当前会话还没有可沉淀的问答");
     const data = await requestJson(`/api/sessions/${sessionId}/candidate-draft`, jsonBody({question: lastQuestion, answer: lastAnswer}));
     $("draft-path").value = data.draft_path;
     addMessage("assistant", `已生成候选知识草稿：${data.draft_path}`);
