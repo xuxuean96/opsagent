@@ -40,7 +40,8 @@
       </section>
 
       <nav class="nav">
-        <button class="nav-item active" data-view="chat">实施问答</button>
+        <button class="nav-item active" data-view="workspace">工作台</button>
+        <button class="nav-item" data-view="dashboard">管理首页</button>
         <button class="nav-item" data-view="sessions">会话复盘</button>
         <button class="nav-item" data-view="admin">管理员介入</button>
         <button class="nav-item" data-view="knowledge">知识审核</button>
@@ -58,34 +59,91 @@
     </aside>
 
     <main class="main">
-      <section id="view-chat" class="view active">
+      <div id="implementer-shell" class="role-shell">
+        <div class="workspace-topbar">
+          <div>
+            <span class="eyebrow">当前项目</span>
+            <strong id="current-project-code">未选择</strong>
+          </div>
+          <div id="project-switcher" class="project-switcher">
+            <input id="project-code" placeholder="项目缩写，如 ZJDL">
+            <input id="implementer" placeholder="实施姓名">
+            <input id="session-component" placeholder="组件，如 DDB / KMVue">
+            <button id="switch-project" type="button">切换项目</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="management-shell" class="role-shell">
+        <div class="workspace-topbar">
+          <div>
+            <span class="eyebrow">管理控制台</span>
+            <strong>待处理事项、账号、知识和运行状态</strong>
+          </div>
+        </div>
+      </div>
+
+      <section id="view-workspace" class="view active">
         <header class="view-header">
           <div>
-            <h2>实施问答入口</h2>
-            <p id="trial-guide">登录后先创建会话，再上传日志或截图并提问。</p>
+            <h2>实施工作台</h2>
+            <p id="trial-guide">先选择项目，再围绕当前项目创建问题会话、上传日志或截图并提问。</p>
           </div>
           <button id="refresh-entry" type="button">刷新入口</button>
         </header>
-        <div class="session-bar">
-          <label>项目缩写<input id="project-code" placeholder="例如 ZJDL"></label>
-          <label>实施姓名<input id="implementer" placeholder="真实姓名"></label>
-          <label>组件<input id="session-component" placeholder="DDB / KMVue / 加密卡"></label>
-          <button id="start-session" type="button">创建会话</button>
+        <div class="workspace-layout">
+          <aside class="workspace-side">
+            <button id="start-session" type="button">新建问题会话</button>
+            <input id="attachment-file" type="file" accept=".txt,.log,.xml,.json,.ini,.conf,image/*">
+            <button id="upload-attachment" type="button">上传日志/图片</button>
+            <button id="request-admin" type="button">申请管理员介入</button>
+            <button id="candidate-draft" type="button">生成知识草稿</button>
+            <div class="feedback-stack">
+              <span>本次会话反馈</span>
+              <button data-feedback="resolved" class="feedback-btn secondary" type="button">已解决</button>
+              <button data-feedback="partial" class="feedback-btn secondary" type="button">部分解决</button>
+              <button data-feedback="unresolved" class="feedback-btn secondary" type="button">未解决</button>
+            </div>
+          </aside>
+          <section class="chat-panel">
+            <div id="messages" class="messages"></div>
+            <form id="chat-form" class="composer">
+              <textarea id="message" rows="3" placeholder="描述组件、系统环境、报错全文、日志第一条错误和已经做过的检查。"></textarea>
+              <button type="submit">发送</button>
+            </form>
+          </section>
         </div>
-        <div class="session-tools">
-          <input id="attachment-file" type="file" accept=".txt,.log,.xml,.json,.ini,.conf,image/*">
-          <button id="upload-attachment" type="button">上传日志/图片</button>
-          <button data-feedback="resolved" class="feedback-btn" type="button">已解决</button>
-          <button data-feedback="partial" class="feedback-btn" type="button">部分解决</button>
-          <button data-feedback="unresolved" class="feedback-btn" type="button">未解决</button>
-          <button id="candidate-draft" type="button">生成知识草稿</button>
-          <button id="request-admin" type="button">申请管理员介入</button>
+      </section>
+
+      <section id="view-dashboard" class="view">
+        <header class="view-header">
+          <div>
+            <h2>管理首页</h2>
+            <p>集中查看待反馈会话、管理员介入、后台告警和运行作业。</p>
+          </div>
+          <div class="actions">
+            <button id="refresh-sessions-dashboard" type="button">刷新复盘</button>
+            <button id="refresh-alerts-dashboard" type="button">刷新告警</button>
+          </div>
+        </header>
+        <div id="admin-dashboard" class="dashboard-grid">
+          <section>
+            <h2>会话反馈</h2>
+            <div id="feedback-summary-dashboard" class="metric-grid"></div>
+          </section>
+          <section>
+            <h2>管理员介入</h2>
+            <div id="admin-list-dashboard" class="table"></div>
+          </section>
+          <section>
+            <h2>后台告警</h2>
+            <div id="alert-list-dashboard" class="table"></div>
+          </section>
+          <section>
+            <h2>后台作业</h2>
+            <div id="job-list-dashboard" class="table"></div>
+          </section>
         </div>
-        <div id="messages" class="messages"></div>
-        <form id="chat-form" class="composer">
-          <textarea id="message" rows="3" placeholder="描述组件、系统环境、报错全文、日志第一条错误和已经做过的检查。"></textarea>
-          <button type="submit">发送</button>
-        </form>
       </section>
 
       <section id="view-sessions" class="view">

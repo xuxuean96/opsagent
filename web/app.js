@@ -1,13 +1,16 @@
 let sessionId = localStorage.getItem("ops-agent-session") || "";
 let csrfToken = localStorage.getItem("ops-agent-csrf") || "";
+let currentProject = localStorage.getItem("ops-agent-current-project") || "";
+let currentImplementer = localStorage.getItem("ops-agent-current-implementer") || "";
+let currentComponent = localStorage.getItem("ops-agent-current-component") || "";
 let lastQuestion = "";
 let lastAnswer = "";
 let currentUser = null;
 
 const ROLE_VIEWS = {
-  admin: ["chat", "sessions", "admin", "knowledge", "ops", "accounts", "config", "evaluation", "tasks"],
-  reviewer: ["chat", "sessions", "admin", "knowledge", "ops", "evaluation", "tasks"],
-  implementer: ["chat", "sessions", "tasks"],
+  admin: ["dashboard", "accounts", "sessions", "admin", "knowledge", "ops", "config", "evaluation", "tasks"],
+  reviewer: ["dashboard", "sessions", "admin", "knowledge", "ops", "evaluation", "tasks"],
+  implementer: ["workspace", "sessions", "tasks"],
   auditor: ["sessions", "ops", "evaluation", "tasks"],
 };
 
@@ -60,7 +63,8 @@ function showView(name) {
   if (!view || !nav) return;
   view.classList.add("active");
   nav.classList.add("active");
-  if (name === "chat") loadTrialEntry();
+  if (name === "workspace") loadTrialEntry();
+  if (name === "dashboard") loadDashboard();
   if (name === "sessions") loadSessions(false);
   if (name === "admin") loadAdminCases();
   if (name === "knowledge") loadDrafts();
@@ -85,7 +89,43 @@ function canView(name) {
 }
 
 function defaultView() {
-  return visibleViews()[0] || "chat";
+  return visibleViews()[0] || "workspace";
+}
+
+function renderProjectContext() {
+  $("current-project-code").textContent = currentProject || "未选择";
+  $("project-code").value = currentProject;
+  $("implementer").value = currentImplementer;
+  $("session-component").value = currentComponent;
+}
+
+function switchProject() {
+  const project = $("project-code").value.trim().toUpperCase();
+  const implementer = $("implementer").value.trim();
+  const component = $("session-component").value.trim();
+  if (!/^[A-Z0-9]{2,16}$/.test(project)) {
+    throw new Error("项目名称必须填写拼音首字母缩写，例如 ZJDL。");
+  }
+  if (!implementer) {
+    throw new Error("请填写实施姓名，便于后续复盘和沉淀知识。");
+  }
+  currentProject = project;
+  currentImplementer = implementer;
+  currentComponent = component;
+  localStorage.setItem("ops-agent-current-project", currentProject);
+  localStorage.setItem("ops-agent-current-implementer", currentImplementer);
+  localStorage.setItem("ops-agent-current-component", currentComponent);
+  renderProjectContext();
+  addMessage("assistant", `已切换到项目：${currentProject} / ${currentImplementer}${currentComponent ? " / " + currentComponent : ""}`);
+}
+
+function renderRoleShell() {
+  const implementerShell = $("implementer-shell");
+  const managementShell = $("management-shell");
+  const isImplementer = currentUser && currentUser.role === "implementer";
+  implementerShell.hidden = !isImplementer;
+  managementShell.hidden = !currentUser || isImplementer;
+  renderProjectContext();
 }
 
 function applyAuthState(user) {
@@ -101,6 +141,7 @@ function applyAuthState(user) {
   document.querySelectorAll(".view").forEach((view) => {
     view.classList.remove("active");
   });
+  renderRoleShell();
 }
 
 function addMessage(role, body, sources = []) {
@@ -281,6 +322,19 @@ async function loadAdminCases() {
   }
 }
 
+async function loadDashboard() {
+  await Promise.allSettled([
+    loadSessions(false),
+    loadAdminCases(),
+    loadAlerts(),
+    loadJobs(),
+  ]);
+  $("feedback-summary-dashboard").innerHTML = $("feedback-summary").innerHTML;
+  $("admin-list-dashboard").innerHTML = $("admin-list").innerHTML;
+  $("alert-list-dashboard").innerHTML = $("alert-list").innerHTML;
+  $("job-list-dashboard").innerHTML = $("job-list").innerHTML;
+}
+
 async function loadBackups() {
   try {
     const data = await requestJson("/api/backup");
@@ -411,12 +465,21 @@ $("logout-btn").addEventListener("click", async () => {
 
 $("refresh-entry").addEventListener("click", loadTrialEntry);
 
+$("switch-project").addEventListener("click", () => {
+  try {
+    switchProject();
+  } catch (error) {
+    addMessage("assistant error", error.message);
+  }
+});
+
 $("start-session").addEventListener("click", async () => {
   try {
+    if (!currentProject || !currentImplementer) switchProject();
     const data = await requestJson("/api/sessions", jsonBody({
-      project_code: $("project-code").value.trim(),
-      implementer: $("implementer").value.trim(),
-      component: $("session-component").value.trim() || null,
+      project_code: currentProject,
+      implementer: currentImplementer,
+      component: currentComponent || null,
     }));
     sessionId = data.session.id;
     localStorage.setItem("ops-agent-session", sessionId);
@@ -571,6 +634,8 @@ $("run-evaluation").addEventListener("click", () => submitJob("evaluation"));
 $("refresh-eval-history").addEventListener("click", loadEvaluationHistory);
 $("refresh-sessions").addEventListener("click", () => loadSessions(false));
 $("pending-feedback").addEventListener("click", () => loadSessions(true));
+$("refresh-sessions-dashboard").addEventListener("click", loadDashboard);
+$("refresh-alerts-dashboard").addEventListener("click", loadDashboard);
 $("refresh-admin").addEventListener("click", loadAdminCases);
 $("refresh-tasks").addEventListener("click", loadTasks);
 $("refresh-backups").addEventListener("click", loadBackups);

@@ -182,8 +182,8 @@ dd {
   grid-template-rows: auto 1fr;
 }
 
-#view-chat.active {
-  grid-template-rows: auto auto 1fr auto;
+#view-workspace.active {
+  grid-template-rows: auto 1fr;
 }
 
 .view-header {
@@ -199,6 +199,69 @@ dd {
 .actions {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
+}
+
+.role-shell[hidden] {
+  display: none;
+}
+
+.workspace-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--line);
+  background: #fff;
+}
+
+.eyebrow {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.project-switcher {
+  display: grid;
+  grid-template-columns: 150px 140px 180px auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.workspace-layout {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  min-height: 0;
+}
+
+.workspace-side {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  padding: 18px;
+  border-right: 1px solid var(--line);
+  background: #fbfcff;
+}
+
+.feedback-stack {
+  display: grid;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.feedback-stack span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.chat-panel {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  min-width: 0;
+  min-height: 0;
 }
 
 .messages {
@@ -247,22 +310,6 @@ dd {
   padding: 16px 24px;
   border-top: 1px solid var(--line);
   background: #fff;
-}
-
-.session-bar,
-.session-tools {
-  display: grid;
-  grid-template-columns: 180px 180px 220px auto;
-  gap: 10px;
-  align-items: end;
-  padding: 14px 24px;
-  background: #fff;
-  border-bottom: 1px solid var(--line);
-}
-
-.session-tools {
-  grid-template-columns: minmax(220px, 1fr) repeat(4, auto);
-  align-items: center;
 }
 
 textarea,
@@ -322,6 +369,31 @@ label {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
   padding-top: 20px;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  padding: 24px;
+}
+
+.dashboard-grid > section {
+  min-width: 0;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.dashboard-grid .metric-grid,
+.dashboard-grid .table {
+  margin: 0;
+  padding-top: 12px;
+}
+
+.dashboard-grid .metric-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .metric {
@@ -407,8 +479,15 @@ pre, code {
   .form-grid,
   .metric-grid,
   .composer,
-  .row {
+  .row,
+  .workspace-layout,
+  .dashboard-grid,
+  .project-switcher {
     grid-template-columns: 1fr;
+  }
+  .workspace-topbar {
+    align-items: stretch;
+    flex-direction: column;
   }
   .row small {
     text-align: left;
